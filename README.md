@@ -111,10 +111,9 @@ jobs:
           api-url: ${{ secrets.PIPERY_DEPLOY_BOT_URL }}
           api-token: ${{ secrets.PIPERY_DEPLOY_BOT_TOKEN }}
           idempotency-key: production-${{ inputs.version }}-${{ inputs.deploy_at }}
-          owner: pipery-dev
-          repo: example
           workflow-id: deploy.yml
-          ref: main
           scheduled-at: ${{ inputs.deploy_at }}
           inputs-json: '{"environment":"production","version":"${{ inputs.version }}"}'
 ```
+
+The action defaults `repository` to `${{ github.repository }}` and `ref` to `${{ github.ref_name }}`. Use `repository`, or explicit `owner` and `repo`, only when scheduling a deploy for another repository.

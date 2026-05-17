@@ -13,18 +13,21 @@ inputs:
   installation-key:
     description: GitHub App installation key configured in pipery-deploy-bot.
     default: default
+  repository:
+    description: Repository in owner/name form. Defaults to github.repository.
+    default: ${{ github.repository }}
   owner:
-    description: Repository owner.
-    required: true
+    description: Repository owner. Defaults to the owner part of repository.
+    required: false
   repo:
-    description: Repository name.
-    required: true
+    description: Repository name. Defaults to the repo part of repository.
+    required: false
   workflow-id:
     description: Workflow file name or numeric workflow id to dispatch.
     required: true
   ref:
-    description: Git ref to dispatch.
-    required: true
+    description: Git ref to dispatch. Defaults to github.ref_name.
+    default: ${{ github.ref_name }}
   scheduled-at:
     description: UTC RFC3339 timestamp, for example 2026-05-17T12:00:00Z.
     required: true
@@ -37,15 +40,26 @@ runs:
     - shell: bash
       run: |
         set -euo pipefail
+        repository="${INPUT_REPOSITORY:-}"
+        owner="${INPUT_OWNER:-}"
+        repo="${INPUT_REPO:-}"
+        if [ -z "$owner" ] || [ -z "$repo" ]; then
+          if [[ "$repository" != */* ]]; then
+            echo "repository must be in owner/name form when owner or repo is omitted" >&2
+            exit 1
+          fi
+          owner="${owner:-${repository%%/*}}"
+          repo="${repo:-${repository#*/}}"
+        fi
         jq -n \
-          --arg idempotency_key "${{ inputs.idempotency-key }}" \
-          --arg installation_key "${{ inputs.installation-key }}" \
-          --arg owner "${{ inputs.owner }}" \
-          --arg repo "${{ inputs.repo }}" \
-          --arg workflow_id "${{ inputs.workflow-id }}" \
-          --arg ref "${{ inputs.ref }}" \
-          --arg scheduled_at "${{ inputs.scheduled-at }}" \
-          --argjson inputs '${{ inputs.inputs-json }}' \
+          --arg idempotency_key "$INPUT_IDEMPOTENCY_KEY" \
+          --arg installation_key "$INPUT_INSTALLATION_KEY" \
+          --arg owner "$owner" \
+          --arg repo "$repo" \
+          --arg workflow_id "$INPUT_WORKFLOW_ID" \
+          --arg ref "$INPUT_REF" \
+          --arg scheduled_at "$INPUT_SCHEDULED_AT" \
+          --argjson inputs "$INPUT_INPUTS_JSON" \
           '{
             idempotency_key: $idempotency_key,
             installation_key: $installation_key,
@@ -57,7 +71,19 @@ runs:
             inputs: $inputs
           }' |
         curl -fsS \
-          -X POST "${{ inputs.api-url }}/v1/scheduled-deploys" \
-          -H "Authorization: Bearer ${{ inputs.api-token }}" \
+          -X POST "$INPUT_API_URL/v1/scheduled-deploys" \
+          -H "Authorization: Bearer $INPUT_API_TOKEN" \
           -H "Content-Type: application/json" \
           --data-binary @-
+      env:
+        INPUT_API_URL: ${{ inputs.api-url }}
+        INPUT_API_TOKEN: ${{ inputs.api-token }}
+        INPUT_IDEMPOTENCY_KEY: ${{ inputs.idempotency-key }}
+        INPUT_INSTALLATION_KEY: ${{ inputs.installation-key }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_OWNER: ${{ inputs.owner }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_WORKFLOW_ID: ${{ inputs.workflow-id }}
+        INPUT_REF: ${{ inputs.ref }}
+        INPUT_SCHEDULED_AT: ${{ inputs.scheduled-at }}
+        INPUT_INPUTS_JSON: ${{ inputs.inputs-json }}
