@@ -50,6 +50,8 @@ The repository includes:
 
 Set `KUBECONFIG_B64` as a repository or environment secret for the deploy workflow.
 
+On every push to `main` or `v*` tag, the CI workflow also publishes an ArgoCD Application and values override to `pipery-dev/pipery-argocd` under `applications/pipery-deploy-bot/`. Set `PIPERY_ARGOCD_TOKEN` to a token that can write to that private repository.
+
 Run migrations before starting the service:
 
 ```sh
